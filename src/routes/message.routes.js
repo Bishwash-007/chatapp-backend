@@ -1,0 +1,16 @@
+import { Router } from "express";
+import { verifyJWT } from "../middlewares/auth.middlewares.js";
+import {
+  getContacts,
+  getConversation,
+  sendMessage,
+} from "../controllers/message.controllers.js";
+import { upload } from "../middlewares/multer.middlewares.js";
+
+const router = Router();
+
+router.get("/contacts", verifyJWT, getContacts);
+router.get("/messages/:id", verifyJWT, getConversation);
+router.post("/messages/:id", verifyJWT, upload.single("image"), sendMessage);
+
+export default router;
