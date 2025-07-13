@@ -153,4 +153,14 @@ const updateProfile = asyncHandler(async (req, res) => {
   );
 });
 
-export { loginUser, signupUser, logoutUser, updateProfile };
+const checkAuth = asyncHandler(async (req, res) => {
+  if (!req.user) {
+    throw new ApiError(401, "Not authenticated");
+  }
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, req.user, "Current user retrieved"));
+});
+
+export { loginUser, signupUser, logoutUser, updateProfile, checkAuth };

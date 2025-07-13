@@ -4,21 +4,24 @@ import {
   signupUser,
   logoutUser,
   updateProfile,
+  checkAuth,
 } from "../controllers/auth.controllers.js";
 import { verifyJWT } from "../middlewares/auth.middlewares.js";
 import { upload } from "../middlewares/multer.middlewares.js";
 
-const authRouter = Router();
+const router = Router();
 
-authRouter.post("/sign-up", signupUser);
-authRouter.post("/sign-in", loginUser);
-authRouter.post("/log-out", logoutUser);
+router.post("/sign-up", signupUser);
+router.post("/sign-in", loginUser);
+router.post("/log-out", logoutUser);
 
-authRouter.put(
+router.put(
   "/update-profile",
   verifyJWT,
   upload.single("avatar"),
   updateProfile
 );
 
-export default authRouter;
+router.get("/check", verifyJWT, checkAuth);
+
+export default router;
