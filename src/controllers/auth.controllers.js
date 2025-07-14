@@ -5,7 +5,6 @@ import User from "../models/user.models.js";
 import bcrypt from "bcrypt";
 import { generateToken } from "../utils/jwt.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
-import fs from "fs";
 
 const isMobileRequest = (req) => {
   const authHeader = req.headers.authorization;
