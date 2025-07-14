@@ -33,6 +33,23 @@ const getConversation = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, messages, "Fetched Conversation"));
 });
 
+const createGroup = asyncHandler(async (req, res) => {
+  const { name, members } = req.body;
+  const createdBy = req.user._id;
+
+  if (!name || !members || members.length < 2) {
+    throw new ApiError(400, "Group must have a name and at least 2 members");
+  }
+
+  const group = await Group.create({
+    name,
+    members: [...members, createdBy],
+    createdBy,
+  });
+
+  res.status(201).json(new ApiResponse(201, group, "Group created"));
+});
+
 const sendMessage = asyncHandler(async (req, res) => {
   const senderId = req.user._id;
   const { id: receiverId } = req.params;
@@ -73,4 +90,88 @@ const sendMessage = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, newMessage, "Message sent successfully"));
 });
 
-export { getContacts, getConversation, sendMessage };
+const sendGroupMessage = asyncHandler(async (req, res) => {
+  const senderId = req.user._id;
+  const { id: groupId } = req.params;
+  const { text } = req.body;
+
+  let imageUrl = null;
+  if (req.file) {
+    const uploaded = await uploadOnCloudinary(req.file.path);
+    imageUrl = uploaded?.secure_url;
+  }
+
+  if (!text && !imageUrl) {
+    throw new ApiError(400, "Message cannot be empty");
+  }
+
+  const newMessage = await Message.create({
+    senderId,
+    groupId,
+    text: text || "",
+    image: imageUrl || "",
+  });
+
+  const group = await Group.findById(groupId);
+
+  // notifies all group members via socket.io
+  group.members.forEach((memberId) => {
+    const socketId = getReceiverSocketId(memberId.toString());
+    if (socketId) {
+      io.to(socketId).emit("newGroupMessage", newMessage);
+    }
+  });
+
+  res.status(201).json(new ApiResponse(201, newMessage, "Group message sent"));
+});
+
+const getGroupMessages = asyncHandler(async (req, res) => {
+  const { id: groupId } = req.params;
+
+  const messages = await Message.find({ groupId })
+    .sort({ createdAt: 1 })
+    .populate("senderId", "fullName avatar");
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, messages, "Group messages fetched"));
+});
+
+const getGroups = asyncHandler(async (req, res) => {
+  const groups = await Group.find({ members: req.user._id }).select(
+    "name _id avatar"
+  );
+  res.status(200).json(new ApiResponse(200, groups, "Groups fetched"));
+});
+
+const markMessageAsRead = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { messageId } = req.params;
+
+  const message = await Message.findById(messageId);
+  if (!message.readBy.includes(userId)) {
+    message.readBy.push(userId);
+    await message.save();
+
+    const receiverSocketId = getReceiverSocketId(message.senderId.toString());
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("messageRead", {
+        messageId,
+        readBy: userId,
+      });
+    }
+  }
+
+  res.status(200).json(new ApiResponse(200, message, "Marked as read"));
+});
+
+export {
+  getContacts,
+  getConversation,
+  sendMessage,
+  createGroup,
+  getGroupMessages,
+  sendGroupMessage,
+  getGroups,
+  markMessageAsRead
+};
