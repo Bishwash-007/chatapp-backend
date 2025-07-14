@@ -4,6 +4,7 @@ import ApiResponse from "../utils/ApiResponse.js";
 import ApiError from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { getReceiverSocketId, io } from "../utils/socket.io.js";
 
 const getContacts = asyncHandler(async (req, res) => {
   const userId = req.user._id;
@@ -61,9 +62,15 @@ const sendMessage = asyncHandler(async (req, res) => {
 
   await newMessage.save();
 
-  res.status(201).json(
-    new ApiResponse(201, newMessage, "Message sent successfully")
-  );
+  // TODO :: IMPLEMENT GROUP CHAT
+  const receiverSocketId = getReceiverSocketId(receiverId);
+  if (receiverSocketId) {
+    io.to(receiverSocketId).emit("newMessage", newMessage);
+  }
+
+  res
+    .status(201)
+    .json(new ApiResponse(201, newMessage, "Message sent successfully"));
 });
 
 export { getContacts, getConversation, sendMessage };
