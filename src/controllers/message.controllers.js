@@ -7,14 +7,12 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { getReceiverSocketId, io } from "../utils/socket.io.js";
 
-// Get all users except self
 export const getContacts = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const users = await User.find({ _id: { $ne: userId } }).select("-password");
   res.status(200).json(new ApiResponse(200, users, "Fetched Friends"));
 });
 
-// Get one-on-one chat messages
 export const getConversation = asyncHandler(async (req, res) => {
   const { _id: userId } = req.user;
   const { id: otherUserId } = req.params;
@@ -32,7 +30,6 @@ export const getConversation = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, messages, "Fetched Conversation"));
 });
 
-// Send direct message
 export const sendMessage = asyncHandler(async (req, res) => {
   const { _id: senderId } = req.user;
   const { id: receiverId } = req.params;
@@ -55,7 +52,6 @@ export const sendMessage = asyncHandler(async (req, res) => {
   res.status(201).json(new ApiResponse(201, message, "Message sent successfully"));
 });
 
-// Create a new group
 export const createGroup = asyncHandler(async (req, res) => {
   const { name, members } = req.body;
   const createdBy = req.user._id;
@@ -72,7 +68,6 @@ export const createGroup = asyncHandler(async (req, res) => {
   res.status(201).json(new ApiResponse(201, group, "Group created"));
 });
 
-// Send a group message
 export const sendGroupMessage = asyncHandler(async (req, res) => {
   const { _id: senderId } = req.user;
   const { id: groupId } = req.params;
@@ -97,7 +92,6 @@ export const sendGroupMessage = asyncHandler(async (req, res) => {
   res.status(201).json(new ApiResponse(201, message, "Group message sent"));
 });
 
-// Get messages from a group
 export const getGroupMessages = asyncHandler(async (req, res) => {
   const { id: groupId } = req.params;
 
@@ -108,13 +102,11 @@ export const getGroupMessages = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, messages, "Group messages fetched"));
 });
 
-// Get groups the user is in
 export const getGroups = asyncHandler(async (req, res) => {
   const groups = await Group.find({ members: req.user._id }).select("name _id avatar");
   res.status(200).json(new ApiResponse(200, groups, "Groups fetched"));
 });
 
-// Mark a message as read
 export const markMessageAsRead = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const { messageId } = req.params;

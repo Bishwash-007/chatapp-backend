@@ -6,11 +6,7 @@ import bcrypt from "bcrypt";
 import { generateToken } from "../utils/jwt.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
-const isMobileRequest = (req) => {
-  const authHeader = req.headers.authorization;
-  return authHeader && authHeader.startsWith("Bearer ");
-};
-
+// Signup Controller
 const signupUser = asyncHandler(async (req, res) => {
   const { fullName, email, password } = req.body;
 
@@ -23,7 +19,6 @@ const signupUser = asyncHandler(async (req, res) => {
   }
 
   const existingUser = await User.findOne({ email });
-
   if (existingUser) {
     throw new ApiError(400, "Email already in use");
   }
@@ -31,28 +26,18 @@ const signupUser = asyncHandler(async (req, res) => {
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
 
-  const newUser = new User({
+  const newUser = await User.create({
     fullName,
     email,
     password: hashedPassword,
   });
 
-  await newUser.save();
-
   const token = generateToken(newUser._id);
-
-  if (!isMobileRequest(req)) {
-    res.cookie("jwt", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-  }
 
   res.status(201).json(
     new ApiResponse(201, {
       message: "User registered successfully",
-      token: isMobileRequest(req) ? token : undefined,
+      token,
       user: {
         _id: newUser._id,
         fullName: newUser.fullName,
@@ -62,6 +47,7 @@ const signupUser = asyncHandler(async (req, res) => {
   );
 });
 
+// Login Controller
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -70,54 +56,32 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 
   const user = await User.findOne({ email: email.toLowerCase() });
-
   if (!user) {
-    throw new ApiError(400, "Invalid Credentials");
+    throw new ApiError(400, "Invalid credentials");
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
-
   if (!isPasswordValid) {
-    throw new ApiError(400, "Invalid Credentials");
+    throw new ApiError(400, "Invalid credentials");
   }
 
   const token = generateToken(user._id);
 
-  if (!isMobileRequest(req)) {
-    res.cookie("jwt", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-  }
-
   res.status(200).json(
-    new ApiResponse(
-      200,
-      {
-        token: isMobileRequest(req) ? token : undefined,
+    new ApiResponse(200, {
+      token,
+      user: {
         _id: user._id,
         fullName: user.fullName,
         email: user.email,
         avatar: user.avatar,
       },
-      "Logged in Successfully"
-    )
+    }, "Logged in successfully")
   );
 });
 
-const logoutUser = asyncHandler(async (req, res) => {
-  if (!isMobileRequest(req)) {
-    res.clearCookie("jwt", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-    });
-  }
-
-  res
-    .status(200)
-    .json(new ApiResponse(200, null, "User Logged Out Successfully"));
+const logoutUser = asyncHandler(async (_req, res) => {
+  res.status(200).json(new ApiResponse(200, null, "User logged out successfully"));
 });
 
 const updateProfile = asyncHandler(async (req, res) => {
@@ -127,11 +91,9 @@ const updateProfile = asyncHandler(async (req, res) => {
     throw new ApiError(400, "No avatar file uploaded");
   }
 
-  const localFilePath = req.file.path;
+  const cloudinaryResponse = await uploadOnCloudinary(req.file.path);
 
-  const cloudinaryResponse = await uploadOnCloudinary(localFilePath);
-
-  if (!cloudinaryResponse || !cloudinaryResponse.secure_url) {
+  if (!cloudinaryResponse?.secure_url) {
     throw new ApiError(500, "Avatar upload failed");
   }
 
@@ -154,9 +116,14 @@ const checkAuth = asyncHandler(async (req, res) => {
     throw new ApiError(401, "Not authenticated");
   }
 
-  res
-    .status(200)
-    .json(new ApiResponse(200, req.user, "Current user retrieved"));
+  res.status(200).json(
+    new ApiResponse(200, {
+      _id: req.user._id,
+      fullName: req.user.fullName,
+      email: req.user.email,
+      avatar: req.user.avatar,
+    }, "User authenticated")
+  );
 });
 
 export { loginUser, signupUser, logoutUser, updateProfile, checkAuth };
