@@ -45,7 +45,6 @@ const signupUser = asyncHandler(async (req, res) => {
     res.cookie("jwt", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
   }
@@ -88,7 +87,6 @@ const loginUser = asyncHandler(async (req, res) => {
     res.cookie("jwt", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
   }
@@ -110,11 +108,10 @@ const loginUser = asyncHandler(async (req, res) => {
 
 const logoutUser = asyncHandler(async (req, res) => {
   if (!isMobileRequest(req)) {
-    res.cookie("jwt", token, {
+    res.clearCookie("jwt", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: "/",
     });
   }
 
