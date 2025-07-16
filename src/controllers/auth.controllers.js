@@ -6,7 +6,6 @@ import bcrypt from "bcrypt";
 import { generateToken } from "../utils/jwt.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
-// Signup Controller
 const signupUser = asyncHandler(async (req, res) => {
   const { fullName, email, password } = req.body;
 
@@ -47,7 +46,6 @@ const signupUser = asyncHandler(async (req, res) => {
   );
 });
 
-// Login Controller
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
