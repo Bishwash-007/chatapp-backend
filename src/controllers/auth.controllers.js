@@ -5,6 +5,7 @@ import User from "../models/user.models.js";
 import bcrypt from "bcrypt";
 import { generateToken } from "../utils/jwt.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { log } from "console";
 
 const signupUser = asyncHandler(async (req, res) => {
   const { fullName, email, password } = req.body;
@@ -83,7 +84,11 @@ const logoutUser = asyncHandler(async (_req, res) => {
 });
 
 const updateProfile = asyncHandler(async (req, res) => {
-  const userId = req.user?.userId || req.userId;
+  const userId = req.user._id
+
+  if (!userId) {
+    throw new ApiError(400, "Invalid or missing user ID");
+  }
 
   if (!req.file) {
     throw new ApiError(400, "No avatar file uploaded");
@@ -95,16 +100,20 @@ const updateProfile = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Avatar upload failed");
   }
 
-  const user = await User.findByIdAndUpdate(
+  const updatedUser = await User.findByIdAndUpdate(
     userId,
     { avatar: cloudinaryResponse.secure_url },
-    { new: true }
+    { new: true, runValidators: true }
   ).select("-password");
 
-  res.status(200).json(
+  if (!updatedUser) {
+    throw new ApiError(404, "User not found");
+  }
+
+  return res.status(200).json(
     new ApiResponse(200, {
       message: "Profile updated successfully",
-      user,
+      user: updatedUser,
     })
   );
 });
