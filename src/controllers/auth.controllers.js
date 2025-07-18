@@ -5,7 +5,6 @@ import User from "../models/user.models.js";
 import bcrypt from "bcrypt";
 import { generateToken } from "../utils/jwt.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
-import { log } from "console";
 
 const signupUser = asyncHandler(async (req, res) => {
   const { fullName, email, password } = req.body;

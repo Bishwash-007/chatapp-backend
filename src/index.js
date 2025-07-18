@@ -1,20 +1,18 @@
 import dotenv from "dotenv";
 import connectToDatabase from "./db/db.js";
-// import { server } from "./utils/socket.io.js";
-import { app } from "./app.js";
+import { server } from "./utils/socket.io.js";
 
-dotenv.config({
-  path: ".env",
-});
+dotenv.config();
+
+const PORT = process.env.PORT || 8000;
 
 connectToDatabase()
   .then(() => {
-    //replace app with sockets server for socket
-    app.listen(process.env.PORT || 8000, () => {
-      console.log("connected to database");
-      console.log(`server running http://localhost:${process.env.PORT}`);
+    server.listen(PORT, () => {
+      console.log("DB connected successfully");
+      console.log(`Server running at http://localhost:${PORT}`);
     });
   })
   .catch((err) => {
-    console.log("connection failed", err);
+    console.error("DB connection failed:", err.message);
   });
