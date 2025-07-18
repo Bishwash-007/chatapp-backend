@@ -5,7 +5,7 @@ import ApiResponse from "../utils/ApiResponse.js";
 import ApiError from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
-import { io } from "../utils/socket.io.js";
+import { io, getReceiverSocketId } from "../utils/socket.io.js";
 
 export const getContacts = asyncHandler(async (req, res) => {
   const userId = req.user._id;
@@ -20,7 +20,7 @@ export const getConversation = asyncHandler(async (req, res) => {
   const messages = await Message.find({
     $or: [
       { senderId: userId, receiverId: otherUserId },
-      { senderId: otherUserId, receiverId: userId }
+      { senderId: otherUserId, receiverId: userId },
     ],
   })
     .sort({ createdAt: 1 })
@@ -33,23 +33,42 @@ export const getConversation = asyncHandler(async (req, res) => {
 export const sendMessage = asyncHandler(async (req, res) => {
   const { _id: senderId } = req.user;
   const { id: receiverId } = req.params;
-  const { text } = req.body;
+  const text = req.body.message;
 
-  let imageUrl = null;
-  if (req.file) {
-    const upload = await uploadOnCloudinary(req.file.path);
-    imageUrl = upload?.secure_url || null;
-    if (!imageUrl) throw new ApiError(500, "Failed to upload image");
+  let imageUrls = [];
+
+  if (req.files && Array.isArray(req.files)) {
+    for (const file of req.files) {
+      const upload = await uploadOnCloudinary(file.path);
+      if (upload?.secure_url) {
+        imageUrls.push(upload.secure_url);
+      } else {
+        throw new ApiError(500, "Failed to upload image");
+      }
+    }
   }
 
-  if (!text && !imageUrl) throw new ApiError(400, "Message cannot be empty");
+  if (!text?.trim() && imageUrls.length === 0) {
+    throw new ApiError(400, "Message cannot be empty");
+  }
 
-  const message = await Message.create({ senderId, receiverId, text: text || "", image: imageUrl || "" });
+  const messageData = {
+    senderId,
+    receiverId,
+    text: text || "",
+    image: imageUrls.length > 0 ? imageUrls : "",
+  };
+
+  const message = await new Message(messageData).save();
 
   const socketId = getReceiverSocketId(receiverId);
-  if (socketId) io.to(socketId).emit("newMessage", message);
+  if (socketId) {
+    io.to(socketId).emit("newMessage", message);
+  }
 
-  res.status(201).json(new ApiResponse(201, message, "Message sent successfully"));
+  res
+    .status(201)
+    .json(new ApiResponse(201, message, "Message sent successfully"));
 });
 
 export const createGroup = asyncHandler(async (req, res) => {
@@ -81,7 +100,12 @@ export const sendGroupMessage = asyncHandler(async (req, res) => {
 
   if (!text && !imageUrl) throw new ApiError(400, "Message cannot be empty");
 
-  const message = await Message.create({ senderId, groupId, text: text || "", image: imageUrl || "" });
+  const message = await Message.create({
+    senderId,
+    groupId,
+    text: text || "",
+    image: imageUrl || "",
+  });
 
   const group = await Group.findById(groupId);
   group.members.forEach((memberId) => {
@@ -99,11 +123,15 @@ export const getGroupMessages = asyncHandler(async (req, res) => {
     .sort({ createdAt: 1 })
     .populate("senderId", "fullName avatar");
 
-  res.status(200).json(new ApiResponse(200, messages, "Group messages fetched"));
+  res
+    .status(200)
+    .json(new ApiResponse(200, messages, "Group messages fetched"));
 });
 
 export const getGroups = asyncHandler(async (req, res) => {
-  const groups = await Group.find({ members: req.user._id }).select("name _id avatar");
+  const groups = await Group.find({ members: req.user._id }).select(
+    "name _id avatar"
+  );
   res.status(200).json(new ApiResponse(200, groups, "Groups fetched"));
 });
 
