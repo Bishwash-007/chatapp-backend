@@ -36,18 +36,11 @@ export const sendMessage = asyncHandler(async (req, res) => {
   const receiverId = req.params.id;
   const text = req.body.message;
 
-  console.log(req.files);
-
-  console.log("sender id", senderId);
-  console.log("receiver id", receiverId);
-  console.log("text", text);
-
   let imageUrls = [];
 
   if (req.files && Array.isArray(req.files)) {
     for (const file of req.files) {
       const upload = await uploadOnCloudinary(file.path);
-      console.log(upload);
       
       if (upload?.secure_url) {
         imageUrls.push(upload.secure_url);
@@ -60,9 +53,6 @@ export const sendMessage = asyncHandler(async (req, res) => {
   if (!text?.trim() && imageUrls.length === 0) {
     throw new ApiError(400, "Message cannot be empty");
   }
-
-  console.log(imageUrls);
-  
 
   const messageData = {
     senderId,
