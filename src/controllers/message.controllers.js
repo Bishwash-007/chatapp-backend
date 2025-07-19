@@ -15,7 +15,10 @@ export const getContacts = asyncHandler(async (req, res) => {
 
 export const getConversation = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-  const otherUserId = req.params._id;
+  const otherUserId = req.params.id;
+
+  console.log("User:", userId);
+  console.log("Other:", otherUserId);
 
   const messages = await Message.find({
     $or: [
@@ -31,7 +34,6 @@ export const getConversation = asyncHandler(async (req, res) => {
 });
 
 export const sendMessage = asyncHandler(async (req, res) => {
-  console.log("req", req.user);
   const senderId = req.user.id;
   const receiverId = req.params.id;
   const text = req.body.message;
@@ -41,7 +43,7 @@ export const sendMessage = asyncHandler(async (req, res) => {
   if (req.files && Array.isArray(req.files)) {
     for (const file of req.files) {
       const upload = await uploadOnCloudinary(file.path);
-      
+
       if (upload?.secure_url) {
         imageUrls.push(upload.secure_url);
       } else {
