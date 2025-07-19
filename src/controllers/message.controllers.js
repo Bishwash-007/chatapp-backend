@@ -14,8 +14,8 @@ export const getContacts = asyncHandler(async (req, res) => {
 });
 
 export const getConversation = asyncHandler(async (req, res) => {
-  const { _id: userId } = req.user;
-  const { id: otherUserId } = req.params;
+  const userId = req.user._id;
+  const otherUserId = req.params._id;
 
   const messages = await Message.find({
     $or: [
@@ -31,15 +31,24 @@ export const getConversation = asyncHandler(async (req, res) => {
 });
 
 export const sendMessage = asyncHandler(async (req, res) => {
-  const { _id: senderId } = req.user;
-  const { id: receiverId } = req.params;
+  console.log("req", req.user);
+  const senderId = req.user.id;
+  const receiverId = req.params.id;
   const text = req.body.message;
+
+  console.log(req.files);
+
+  console.log("sender id", senderId);
+  console.log("receiver id", receiverId);
+  console.log("text", text);
 
   let imageUrls = [];
 
   if (req.files && Array.isArray(req.files)) {
     for (const file of req.files) {
       const upload = await uploadOnCloudinary(file.path);
+      console.log(upload);
+      
       if (upload?.secure_url) {
         imageUrls.push(upload.secure_url);
       } else {
@@ -52,11 +61,14 @@ export const sendMessage = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Message cannot be empty");
   }
 
+  console.log(imageUrls);
+  
+
   const messageData = {
     senderId,
     receiverId,
     text: text || "",
-    image: imageUrls.length > 0 ? imageUrls : "",
+    image: imageUrls,
   };
 
   const message = await new Message(messageData).save();

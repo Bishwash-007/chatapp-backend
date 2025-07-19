@@ -15,9 +15,11 @@ const messageSchema = new mongoose.Schema(
     text: {
       type: String,
     },
-    image: {
-      type: String,
-    },
+    image: [
+      {
+        type: String,
+      },
+    ],
     groupId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Group",

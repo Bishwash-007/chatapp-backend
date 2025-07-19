@@ -12,22 +12,21 @@ export const verifyJWT = asyncHandler(async (req, _res, next) => {
 
   const token = authHeader.split(" ")[1];
 
-  if (!token || typeof token !== "string") {
-    throw new ApiError(401, "Unauthorized: Invalid token format");
-  }
-
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await User.findById(decoded.userId).select("-password");
+
+    console.log(user);
 
     if (!user) {
       throw new ApiError(404, "User not found");
     }
 
     req.user = user;
+
     next();
-  } catch (err) {
+  } catch (error) {
     throw new ApiError(401, "Unauthorized: Invalid or expired token");
   }
 });

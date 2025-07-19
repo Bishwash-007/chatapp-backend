@@ -16,9 +16,14 @@ const router = Router();
 
 router.get("/contacts", verifyJWT, getContacts);
 router.get("/messages/:id", verifyJWT, getConversation);
-router.post("/messages/send/:id", verifyJWT, upload.single("image"), sendMessage);
+router.post(
+  "/messages/send/:id",
+  verifyJWT,
+  upload.array("files"),
+  sendMessage
+);
 router.post("/groups", verifyJWT, createGroup);
-router.post("/groups/:id", verifyJWT, upload.single("image"), sendGroupMessage);
+router.post("/groups/:id", verifyJWT, upload.array("images"), sendGroupMessage);
 router.get("/groups/send/:id/messages", verifyJWT, getGroupMessages);
 router.get("/groups", verifyJWT, getGroups);
 router.post("/messages/:messageId/read", verifyJWT, markMessageAsRead);
